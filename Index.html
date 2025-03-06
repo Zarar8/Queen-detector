@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition - Queen Detector</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        h2 {
+            color: #333;
+        }
+        input {
+            display: none;
+        }
+        label {
+            display: block;
+            width: 90%;
+            max-width: 300px;
+            margin: 10px auto;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        img {
+            max-width: 90%;
+            height: auto;
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 18px;
+            width: 90%;
+            max-width: 300px;
+            margin: 10px auto;
+            display: block;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: gray;
+            cursor: not-allowed;
+        }
+        p {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h2>Queen Detector!</h2>
+    <img id="queenImage" src="queen.jpg"><br>
+
+    <h2>Upload an Image to Check</h2>
+    <label for="testImageUpload">Choose Image</label>
+    <input type="file" id="testImageUpload" accept="image/*">
+    <img id="testImage"><br>
+
+    <button id="identifyBtn" disabled>Check Image</button>
+
+    <h3>Result:</h3>
+    <p id="result">Waiting for image...</p>
+
+    <script>
+        let queenFaceDescriptor = null;
+
+        async function loadModels() {
+            await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+
+            const queenImg = document.getElementById('queenImage');
+            queenImg.onload = async function () {
+                const detection = await faceapi.detectSingleFace(queenImg).withFaceLandmarks().withFaceDescriptor();
+                if (detection) {
+                    queenFaceDescriptor = detection.descriptor;
+                    document.getElementById('result').innerText = "Queen's face is set!";
+                } else {
+                    document.getElementById('result').innerText = "Error: Face not detected in queen.jpg";
+                }
+            };
+        }
+
+        document.getElementById('testImageUpload').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            document.getElementById('testImage').src = URL.createObjectURL(file);
+            document.getElementById('identifyBtn').disabled = false;
+        });
+
+        document.getElementById('identifyBtn').addEventListener('click', async function() {
+            if (!queenFaceDescriptor) {
+                document.getElementById('result').innerText = "Error: Queen's face not set!";
+                return;
+            }
+
+            const testImg = document.getElementById('testImage');
+            const detection = await faceapi.detectSingleFace(testImg).withFaceLandmarks().withFaceDescriptor();
+
+            if (!detection) {
+                document.getElementById('result').innerText = "No face detected!";
+                return;
+            }
+
+            const faceMatcher = new faceapi.FaceMatcher(queenFaceDescriptor);
+            const match = faceMatcher.findBestMatch(detection.descriptor);
+
+            if (match.distance < 0.5) { 
+                document.getElementById('result').innerText = "She is Queen 👑";
+            } else {
+                document.getElementById('result').innerText = "She is NOT Queen ❌";
+            }
+        });
+
+        loadModels();
+    </script>
+</body>
+</html>
